@@ -1,8 +1,9 @@
 from flask import Flask, request, render_template_string
 import os
 import re
+from _markupbase import escape
 
-WALLET_RE = re.compile(r"^[A-Fa-f0-9]{8,128}$")
+WALLET_RE = re.compile(r"^0x[A-Fa-f0-9]{8,128}$")
 
 app = Flask(__name__)
 
@@ -94,14 +95,14 @@ LOOKUP_PAGE = '''
 def home():
     return render_template_string(
         HOMEPAGE,
-        env=os.environ.get('ENVIRONMENT', 'production'),
-        node=os.environ.get('HOSTNAME', 'unknown'),
+        env=escape(os.environ.get('ENVIRONMENT', 'production')),
+        node=escape(os.environ.get('HOSTNAME', 'unknown')),
     )
 
 
 @app.route('/lookup')
 def lookup():
-    wallet = request.args.get('wallet', '').strip()
+    wallet = escape(request.args.get('wallet', '').strip())
 
     if not WALLET_RE.fullmatch(wallet):
         return render_template_string(
@@ -111,7 +112,12 @@ def lookup():
         ), 400
 
     result = f"Looking up wallet: {wallet}"
-    return render_template_string(LOOKUP_PAGE, wallet=wallet, result=result)
+
+    return render_template_string(
+        LOOKUP_PAGE,
+        wallet=wallet,
+        result=result
+    )
 
 @app.route('/health')
 def health():
@@ -121,25 +127,21 @@ def health():
 @app.route('/status')
 def status():
     return render_template_string('''
-    <pre style="background:#0a0e17;color:#e2e8f0;padding:2rem;font-family:monospace;">
+    <pre>
 VaultCorp Status
 ================
-Version:     0.1.0-INSECURE
-Uptime:      unknown
+Version:     1.0.0
 Node:        {{ node }}
 Environment: {{ env }}
 Python:      {{ python }}
     </pre>
     ''',
-        node=os.environ.get('HOSTNAME', 'unknown'),
-        env=os.environ.get('ENVIRONMENT', 'production'),
-        python=os.environ.get('PYTHON_VERSION', 'unknown'),
+        node=escape(os.environ.get('HOSTNAME', 'unknown')),
+        env=escape(os.environ.get('ENVIRONMENT', 'production')),
+        python=escape(os.environ.get('PYTHON_VERSION', 'unknown')),
     )
 
-
-@app.route('/debug')
-def debug():
-    return "disabled", 403
+# Debug endpoint bortagen helt
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
