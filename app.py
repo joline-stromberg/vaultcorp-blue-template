@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template_string
 import os
-import subprocess
+import re
+
+WALLET_RE = re.compile(r"^[A-Fa-f0-9]{8,128}$")
 
 app = Flask(__name__)
 
@@ -99,12 +101,17 @@ def home():
 
 @app.route('/lookup')
 def lookup():
-    wallet = request.args.get('wallet', '')
-    # VULN: command injection via user input passed to shell
-    result = subprocess.getoutput(f'echo "Looking up wallet: {wallet}"')
-    # VULN: XSS — wallet is rendered unescaped via render_template_string
-    return render_template_string(LOOKUP_PAGE, wallet=wallet, result=result)
+    wallet = request.args.get('wallet', '').strip()
 
+    if not WALLET_RE.fullmatch(wallet):
+        return render_template_string(
+            LOOKUP_PAGE,
+            wallet=wallet,
+            result='Invalid wallet format',
+        ), 400
+
+    result = f"Looking up wallet: {wallet}"
+    return render_template_string(LOOKUP_PAGE, wallet=wallet, result=result)
 
 @app.route('/health')
 def health():
@@ -132,16 +139,7 @@ Python:      {{ python }}
 
 @app.route('/debug')
 def debug():
-    # VULN: debug endpoint exposes ALL environment variables including secrets
-    envs = '\n'.join(f'{k}={v}' for k, v in sorted(os.environ.items()))
-    return f'''
-    <pre style="background:#0a0e17;color:#f59e0b;padding:2rem;font-family:monospace;">
-DEBUG — Environment Variables
-=============================
-{envs}
-    </pre>
-    '''
-
+    return "disabled", 403
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
