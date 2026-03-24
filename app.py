@@ -136,10 +136,7 @@ Python:      {{ python }}
         python=os.environ.get('PYTHON_VERSION', 'unknown'),
     )
 
-
-@app.route('/debug')
-def debug():
-    return "disabled", 403
+# Debug endpoint bortagen helt
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
